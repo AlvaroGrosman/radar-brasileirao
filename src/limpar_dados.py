@@ -8,6 +8,7 @@ PASTA_PROCESSADA = Path("data/processed")
 ARQUIVO_LIMPO = PASTA_PROCESSADA / "partidas_limpas.csv"
 
 PRIMEIRA_TEMPORADA = 2003
+LIMITE_DIAS_ENTRE_TEMPORADAS = 60
 
 
 def carregar_dados():
@@ -24,8 +25,9 @@ def limpar_partidas(partidas):
     partidas["data"] = pd.to_datetime(partidas["data"], format="%d/%m/%Y")
 
     # 3. Cria a temporada: uma nova temporada começa quando a rodada "volta" para trás
-    partidas = partidas.sort_values("ID").reset_index(drop=True)
-    nova_temporada = partidas["rodada"] < partidas["rodada"].shift(1)
+    partidas = partidas.sort_values(["data", "ID"]).reset_index(drop=True)
+    dias_desde_jogo_anterior = partidas["data"].diff().dt.days
+    nova_temporada = dias_desde_jogo_anterior > LIMITE_DIAS_ENTRE_TEMPORADAS
     partidas["temporada"] = PRIMEIRA_TEMPORADA + nova_temporada.cumsum()
 
     # 4. Cria colunas derivadas
@@ -56,6 +58,11 @@ def validar(partidas):
         (partidas["resultado"] == "empate") != (partidas["vencedor"] == "-")
     ]
     print("Linhas em que 'resultado' e 'vencedor' discordam:", len(inconsistentes))
+    print(
+        inconsistentes[
+            ["ID", "data", "mandante", "visitante", "mandante_Placar", "visitante_Placar", "vencedor", "resultado"]
+        ]
+    )
 
 
 def main():
